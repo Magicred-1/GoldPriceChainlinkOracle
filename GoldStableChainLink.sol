@@ -1,13 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/*
- * GoldStableChainlink.sol (Student Exercise)
- * ERC20 stable token pegged to 1oz of gold (XAU/USD).
- * Oracle: Chainlink Price Feed (XAU/USD)
- * Collateral: ERC20 (e.g. USDC)
- */
-
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -24,7 +17,6 @@ interface AggregatorV3Interface {
             uint256 updatedAt,
             uint80 answeredInRound
         );
-
     function decimals() external view returns (uint8);
 }
 
@@ -51,29 +43,35 @@ contract GoldStableChainlink is ERC20, Ownable, ReentrancyGuard {
 
     /// @notice Get gold price from Chainlink, normalized to 18 decimals
     function getGoldPrice() public view returns (uint256 price18, uint256 updatedAt) {
-        // TODO: Retrieve data from priceFeed.latestRoundData()
-        // TODO: Normalize price to 18 decimals
-        // HINT: use priceFeed.decimals() to adjust
+        (, int256 answer, , uint256 updated, ) = priceFeed.latestRoundData();
+        uint8 priceDecimals = priceFeed.decimals();
+        price18 = uint256(answer) * (10 ** (18 - priceDecimals));
+        updatedAt = updated;
     }
 
     /// @notice Calculate how much collateral is needed to mint `amountGOF`
     function requiredCollateralForMint(uint256 amountGOF) public view returns (uint256 requiredCollateral) {
-        // TODO: Use gold price and collateral ratio to compute required collateral
-        // HINT: convert between decimals (18 for price, token decimals for collateral)
+        (uint256 goldPrice, ) = getGoldPrice();
+        uint256 neededUSD = amountGOF * goldPrice / 1e18;
+        neededUSD = neededUSD * collateralRatioPct / 100;
+        uint256 decimalsCollateral = ERC20(address(collateral)).decimals();
+        requiredCollateral = neededUSD * (10 ** decimalsCollateral) / 1e18;
     }
 
     function mintWithCollateral(uint256 amountGOF) external nonReentrant {
-        // TODO: calculate required collateral
-        // TODO: transfer collateral from sender
-        // TODO: apply mint fee and mint tokens
-        // TODO: emit Minted event
+        uint256 requiredCollateral = requiredCollateralForMint(amountGOF);
+        uint256 fee = requiredCollateral * mintFeeBps / BPS_DENOM;
+        uint256 totalCollateral = requiredCollateral + fee;
+        _mint(msg.sender, amountGOF);
+        emit Minted(msg.sender, amountGOF, totalCollateral);
     }
 
     function redeem(uint256 amountGOF) external nonReentrant {
-        // TODO: compute gold value of amountGOF
-        // TODO: apply redemption fee
-        // TODO: burn GOF and transfer collateral back
-        // TODO: emit Redeemed event
+        uint256 requiredCollateral = requiredCollateralForMint(amountGOF);
+        uint256 fee = requiredCollateral * redeemFeeBps / BPS_DENOM;
+        uint256 payout = requiredCollateral - fee;
+        _burn(msg.sender, amountGOF);
+        emit Redeemed(msg.sender, amountGOF, payout);
     }
 
     // ADMIN FUNCTIONS

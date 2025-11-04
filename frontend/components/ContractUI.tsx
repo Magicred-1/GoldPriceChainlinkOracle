@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAccount, useContractRead, useWalletClient, usePublicClient } from 'wagmi';
 import { ABI } from './abi';
-import { parseUnits } from 'viem';
+import { parseUnits, formatUnits } from 'viem';
 import { CONTRACT_ADDRESS } from './constants';
 
 function formatBigInt(n: any) {
@@ -44,12 +44,27 @@ export default function ContractUI() {
 	useEffect(() => {
 		if (goldPriceData) {
 			const g: any = goldPriceData;
-			setPriceInfo({ price: String(g[0]), updatedAt: String(g[1]) });
+			try {
+				const formatted = formatUnits(g[0] as any, 18);
+				const updated = Number(g[1])
+					? new Date(Number(g[1]) * 1000).toLocaleString()
+					: String(g[1]);
+				setPriceInfo({ price: formatted, updatedAt: updated });
+			} catch (e) {
+				setPriceInfo({ price: String(g[0]), updatedAt: String(g[1]) });
+			}
 		}
 	}, [goldPriceData]);
 
 	useEffect(() => {
-		if (balanceData) setBalance(String(balanceData as any));
+		if (balanceData) {
+			try {
+				const formatted = formatUnits(balanceData as any, 18);
+				setBalance(formatted);
+			} catch (e) {
+				setBalance(String(balanceData as any));
+			}
+		}
 	}, [balanceData]);
 
 	// helper to refresh price and balance manually or after tx
@@ -64,7 +79,15 @@ export default function ContractUI() {
 				functionName: 'getGoldPrice',
 				args: [],
 			});
-			setPriceInfo({ price: String(gp[0]), updatedAt: String(gp[1]) });
+			try {
+				const formatted = formatUnits(gp[0] as any, 18);
+				const updated = Number(gp[1])
+					? new Date(Number(gp[1]) * 1000).toLocaleString()
+					: String(gp[1]);
+				setPriceInfo({ price: formatted, updatedAt: updated });
+			} catch (e) {
+				setPriceInfo({ price: String(gp[0]), updatedAt: String(gp[1]) });
+			}
 
 			// read balance if connected
 			if (address) {
@@ -74,7 +97,11 @@ export default function ContractUI() {
 					functionName: 'balanceOf',
 					args: [address as `0x${string}`],
 				});
-				setBalance(String(b));
+				try {
+					setBalance(formatUnits(b as any, 18));
+				} catch (e) {
+					setBalance(String(b));
+				}
 			}
 		} catch (e) {
 			console.error('refresh failed', e);

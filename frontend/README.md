@@ -55,3 +55,26 @@ npm run dev
 ```
 
 Note: Client-side variables must be prefixed with `NEXT_PUBLIC_` to be available in the browser.
+
+## Deploying to Vercel
+
+Quick steps to deploy this project to Vercel:
+
+1. Push your repository to GitHub (or connect your Git provider).
+2. Go to https://vercel.com and import the repository.
+3. During import, set the "Root Directory" to `frontend` so Vercel builds the Next app in that folder.
+4. In the Vercel project settings -> Environment Variables, add the variables from `.env.example` (use the _Production_ environment for live values):
+
+```
+NEXT_PUBLIC_CONTRACT_ADDRESS=0x...
+NEXT_PUBLIC_COLLATERAL_ADDRESS=0x...
+NEXT_PUBLIC_PRICEFEED_ADDRESS=0x...
+```
+
+5. Leave Build Command as `npm run build` and Output Directory empty (Vercel will detect Next).
+6. Deploy. After the build finishes, the site will be available on your Vercel domain.
+
+Notes:
+
+- If you don't set the root directory during import, Vercel may attempt to build the repository root; you can either set the root there or create a project with the frontend folder as the root.
+- The file `frontend/vercel.json` is provided to help Vercel detect the Next.js app if it can't auto-detect the project root.

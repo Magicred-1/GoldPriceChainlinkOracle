@@ -13,6 +13,7 @@ import { parseUnits } from "viem";
 import { tokenABI } from "@/components/tokenABI";
 import { TOKEN_CONTRACT_ADDRESS, COLLATERAL_TOKEN_CONTRACT_ADDRESS } from "@/components/constants";
 import { erc20Abi } from "viem";
+import NFTCollection from "@/components/NFTCollection";
 
 export default function Home() {
   const { address, isConnected } = useAccount();
@@ -341,7 +342,7 @@ export default function Home() {
               </div>
 
               {/* NFT Collection - Full Width */}
-              <div className="lg:col-span-2">
+              {/* <div className="lg:col-span-2">
                 <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl rounded-3xl p-8 shadow-2xl border border-amber-200/50 dark:border-amber-800/50">
                   <div className="flex items-center gap-3 mb-6">
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center shadow-lg">
@@ -371,7 +372,8 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
-              </div>
+              </div> */}
+              <NFTCollection />
             </div>
           )}
 

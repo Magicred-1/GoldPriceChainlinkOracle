@@ -20,6 +20,7 @@ export default function Home() {
   const [balance, setBalance] = useState<string | null>(null);
   const [loadingBalance, setLoadingBalance] = useState(false);
   const [approved, setApproved] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const amount = parseUnits(mintAmount, 18);
 
@@ -29,26 +30,38 @@ export default function Home() {
 
   const handleApprove = async () => {
     if (!isConnected) return alert("Connect your wallet first");
-    approveContract({
-      address: COLLATERAL_TOKEN_CONTRACT_ADDRESS as `0x${string}`,
-      abi: erc20Abi,
-      functionName: "approve",
-      args: [TOKEN_CONTRACT_ADDRESS as `0x${string}`, amount],
-    });
+    setErrorMessage(null);
+    try {
+      approveContract({
+        address: COLLATERAL_TOKEN_CONTRACT_ADDRESS as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "approve",
+        args: [TOKEN_CONTRACT_ADDRESS as `0x${string}`, amount],
+      });
+    } catch (error) {
+      console.error("Approval error:", error);
+      setErrorMessage("Approval failed. Please try again.");
+    }
   };
 
   // ----- Mint with Collateral -----
-  const { writeContract: mintContract, data: mintHash, isPending } = useWriteContract();
+  const { writeContract: mintContract, data: mintHash, isPending, isError } = useWriteContract();
   const { isLoading: txLoading, isSuccess: mintSuccess } = useWaitForTransactionReceipt({ hash: mintHash });
 
   const handleMint = async () => {
     if (!isConnected) return alert("Connect your wallet first");
-    mintContract({
-      address: TOKEN_CONTRACT_ADDRESS as `0x${string}`,
-      abi: tokenABI,
-      functionName: "mintWithCollateral",
-      args: [amount],
-    });
+    setErrorMessage(null);
+    try {
+      mintContract({
+        address: TOKEN_CONTRACT_ADDRESS as `0x${string}`,
+        abi: tokenABI,
+        functionName: "mintWithCollateral",
+        args: [amount],
+      });
+    } catch (contractError) {
+      console.error("Minting error:", contractError);
+      setErrorMessage("Minting failed. Please try again.");
+    }
   };
 
   // ----- Read: allowance -----
@@ -64,7 +77,9 @@ export default function Home() {
     if (!address) return;
     try {
       const { data } = await refetchAllowance();
-      setApproved(data !== undefined && data !== null && BigInt(data) >= amount);
+      // Check if allowance is sufficient - if so, no need to approve again
+      const hasEnoughAllowance = data !== undefined && data !== null && BigInt(data) >= amount;
+      setApproved(hasEnoughAllowance);
     } catch (err) {
       console.error(err);
       setApproved(false);
@@ -182,7 +197,7 @@ export default function Home() {
                       </div>
                       <div className="bg-amber-100/50 dark:bg-zinc-800/50 rounded-xl p-3">
                         <p className="text-amber-700 dark:text-amber-400 mb-1">Network</p>
-                        <p className="font-semibold text-zinc-800 dark:text-zinc-200">Ethereum Sepolia</p>
+                        <p className="font-semibold text-zinc-800 dark:text-zinc-200">Ethereum</p>
                       </div>
                     </div>
                   </div>
@@ -192,7 +207,7 @@ export default function Home() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl rounded-2xl p-5 shadow-lg border border-amber-200/30 dark:border-amber-800/30 hover:shadow-xl transition-all duration-300">
                     <p className="text-sm text-amber-700 dark:text-amber-400 mb-2">Collateral Ratio</p>
-                    <p className="text-2xl font-bold text-zinc-800 dark:text-zinc-100">120%</p>
+                    <p className="text-2xl font-bold text-zinc-800 dark:text-zinc-100">150%</p>
                   </div>
                   <div className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-xl rounded-2xl p-5 shadow-lg border border-amber-200/30 dark:border-amber-800/30 hover:shadow-xl transition-all duration-300">
                     <p className="text-sm text-amber-700 dark:text-amber-400 mb-2">Stability Fee</p>
@@ -298,6 +313,24 @@ export default function Home() {
                             <div>
                               <p className="font-bold text-green-800 dark:text-green-300">Mint Successful!</p>
                               <p className="text-sm text-green-700 dark:text-green-400">Your tokens have been minted</p>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {errorMessage && (
+                        <div className="bg-red-100 dark:bg-red-900/30 border-2 border-red-500 rounded-2xl p-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                          <div className="flex items-start gap-3">
+                            <span className="text-2xl">❌</span>
+                            <div className="flex-1">
+                              <p className="font-bold text-red-800 dark:text-red-300">Transaction Failed</p>
+                              <p className="text-sm text-red-700 dark:text-red-400 mt-1 break-words">{errorMessage}</p>
+                              <button 
+                                onClick={() => setErrorMessage(null)}
+                                className="text-xs text-red-600 dark:text-red-400 underline mt-2"
+                              >
+                                Dismiss
+                              </button>
                             </div>
                           </div>
                         </div>

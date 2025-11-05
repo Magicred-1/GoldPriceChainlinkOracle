@@ -1,0 +1,40 @@
+{
+    "name": "Pou Galactic Character",
+    "description": "A unique Pou character from the Galactic series, featuring cosmic-themed attributes and vibrant colors.",
+    "image": "https://coffee-far-piranha-960.mypinata.cloud/ipfs/bafkreidaqxagphyqsvox5uwe76q6jvqyktopq6j5jxyq3sz52qrysenfam",
+    "external_url": "https://yourproject.com/nft/42",
+    "background_color": "0000ff",
+    "attributes": [
+        {
+        "trait_type": "Background",
+        "value": "Nebula Blue"
+        },
+        {
+        "trait_type": "Fur",
+        "value": "Snow White"
+        },
+        {
+        "trait_type": "Eyes",
+        "value": "Laser Red"
+        },
+        {
+        "trait_type": "Headwear",
+        "value": "Cosmic Helmet"
+        },
+        {
+        "trait_type": "Rarity",
+        "value": "Rare",
+        "display_type": "string"
+        },
+        {
+        "trait_type": "Generation",
+        "value": 1,
+        "display_type": "number"
+        },
+        {
+        "trait_type": "Boost",
+        "value": 15.5,
+        "display_type": "boost_percentage"
+        }
+    ]
+}

@@ -12,13 +12,10 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  * @title NFTCollectionERC20
  * @dev NFT Collection mintable by paying with ERC20 tokens
  * Metadata stored on IPFS
- * 
- * STUDENT EXERCISE: Complete the TODOs to implement a functional NFT marketplace
  */
 contract NFTCollectionERC20 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     using Counters for Counters.Counter;
     
-    // Counter to track token IDs
     Counters.Counter private _tokenIdCounter;
     
     // ERC20 token used for payment
@@ -32,6 +29,9 @@ contract NFTCollectionERC20 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuar
     
     // Base URI for IPFS metadata
     string private _baseTokenURI;
+    
+    // Mapping to track if a token URI has been set
+    mapping(uint256 => bool) private _tokenURISet;
     
     // Toggle for pausing minting
     bool public mintingPaused;
@@ -72,42 +72,75 @@ contract NFTCollectionERC20 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuar
     /**
      * @dev Mint a new NFT by paying with ERC20 tokens
      * @param tokenURI The IPFS URI for the token metadata (e.g., "QmHash...")
-     * 
-     * TODO: Implement the mint function
-     * HINTS:
-     * 1. Check if minting is not paused
-     * 2. Check if max supply has not been reached
-     * 3. Check if user hasn't exceeded max mints per address (if set)
-     * 4. Transfer ERC20 tokens from minter to this contract using transferFrom
-     * 5. Get current token ID and increment counter
-     * 6. Mint the NFT to msg.sender using _safeMint
-     * 7. Set the token URI using _setTokenURI
-     * 8. Update mintedByAddress mapping
-     * 9. Emit NFTMinted event
      */
     function mint(string memory tokenURI) external nonReentrant {
-        // TODO: Add your implementation here
+        require(!mintingPaused, "Minting is paused");
+        require(_tokenIdCounter.current() < maxSupply, "Max supply reached");
         
+        if (maxMintsPerAddress > 0) {
+            require(
+                mintedByAddress[msg.sender] < maxMintsPerAddress,
+                "Max mints per address reached"
+            );
+        }
+        
+        // Transfer ERC20 tokens from minter to contract
+        require(
+            paymentToken.transferFrom(msg.sender, address(this), mintPrice),
+            "Payment failed"
+        );
+        
+        // Mint NFT
+        uint256 tokenId = _tokenIdCounter.current();
+        _tokenIdCounter.increment();
+        _safeMint(msg.sender, tokenId);
+        _setTokenURI(tokenId, tokenURI);
+        _tokenURISet[tokenId] = true;
+        
+        mintedByAddress[msg.sender]++;
+        
+        emit NFTMinted(msg.sender, tokenId, tokenURI);
     }
     
     /**
      * @dev Batch mint multiple NFTs
      * @param tokenURIs Array of IPFS URIs for token metadata
-     * 
-     * TODO: Implement batch minting
-     * HINTS:
-     * 1. Check minting is not paused and array is not empty
-     * 2. Check that minting all tokens won't exceed max supply
-     * 3. Check max mints per address limit
-     * 4. Calculate total cost (mintPrice * array length)
-     * 5. Transfer total ERC20 tokens from minter
-     * 6. Loop through tokenURIs array and mint each NFT
-     * 7. Update mintedByAddress mapping
-     * 8. Emit NFTMinted event for each token
      */
     function batchMint(string[] memory tokenURIs) external nonReentrant {
-        // TODO: Add your implementation here
+        require(!mintingPaused, "Minting is paused");
+        require(tokenURIs.length > 0, "Empty array");
+        require(
+            _tokenIdCounter.current() + tokenURIs.length <= maxSupply,
+            "Exceeds max supply"
+        );
         
+        if (maxMintsPerAddress > 0) {
+            require(
+                mintedByAddress[msg.sender] + tokenURIs.length <= maxMintsPerAddress,
+                "Exceeds max mints per address"
+            );
+        }
+        
+        uint256 totalCost = mintPrice * tokenURIs.length;
+        
+        // Transfer total ERC20 tokens from minter to contract
+        require(
+            paymentToken.transferFrom(msg.sender, address(this), totalCost),
+            "Payment failed"
+        );
+        
+        // Mint all NFTs
+        for (uint256 i = 0; i < tokenURIs.length; i++) {
+            uint256 tokenId = _tokenIdCounter.current();
+            _tokenIdCounter.increment();
+            _safeMint(msg.sender, tokenId);
+            _setTokenURI(tokenId, tokenURIs[i]);
+            _tokenURISet[tokenId] = true;
+            
+            emit NFTMinted(msg.sender, tokenId, tokenURIs[i]);
+        }
+        
+        mintedByAddress[msg.sender] += tokenURIs.length;
     }
     
     /**
@@ -122,6 +155,7 @@ contract NFTCollectionERC20 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuar
         _tokenIdCounter.increment();
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, tokenURI);
+        _tokenURISet[tokenId] = true;
         
         emit NFTMinted(to, tokenId, tokenURI);
     }
@@ -129,32 +163,22 @@ contract NFTCollectionERC20 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuar
     /**
      * @dev Update the mint price
      * @param newPrice New price in ERC20 tokens
-     * 
-     * TODO: Implement price update function
-     * HINTS:
-     * 1. Store old price in a variable
-     * 2. Update mintPrice to newPrice
-     * 3. Emit MintPriceUpdated event with old and new prices
      */
     function setMintPrice(uint256 newPrice) external onlyOwner {
-        // TODO: Add your implementation here
-        
+        uint256 oldPrice = mintPrice;
+        mintPrice = newPrice;
+        emit MintPriceUpdated(oldPrice, newPrice);
     }
     
     /**
      * @dev Update the payment token
      * @param newPaymentToken Address of new ERC20 payment token
-     * 
-     * TODO: Implement payment token update
-     * HINTS:
-     * 1. Require newPaymentToken is not address(0)
-     * 2. Store old token address
-     * 3. Update paymentToken to new IERC20 instance
-     * 4. Emit PaymentTokenUpdated event
      */
     function setPaymentToken(address newPaymentToken) external onlyOwner {
-        // TODO: Add your implementation here
-        
+        require(newPaymentToken != address(0), "Invalid token address");
+        address oldToken = address(paymentToken);
+        paymentToken = IERC20(newPaymentToken);
+        emit PaymentTokenUpdated(oldToken, newPaymentToken);
     }
     
     /**
@@ -163,21 +187,15 @@ contract NFTCollectionERC20 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuar
      */
     function setBaseURI(string memory baseTokenURI) external onlyOwner {
         _baseTokenURI = baseTokenURI;
-        
         emit BaseURIUpdated(baseTokenURI);
     }
     
     /**
      * @dev Toggle minting pause state
-     * 
-     * TODO: Implement pause toggle
-     * HINTS:
-     * 1. Toggle mintingPaused boolean (flip true/false)
-     * 2. Emit MintingPausedToggled event with new state
      */
     function toggleMintingPause() external onlyOwner {
-        // TODO: Add your implementation here
-        
+        mintingPaused = !mintingPaused;
+        emit MintingPausedToggled(mintingPaused);
     }
     
     /**
@@ -191,18 +209,27 @@ contract NFTCollectionERC20 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuar
     /**
      * @dev Withdraw accumulated ERC20 tokens
      * @param to Address to send tokens to
-     * 
-     * TODO: Implement token withdrawal
-     * HINTS:
-     * 1. Require 'to' address is not address(0)
-     * 2. Get balance of paymentToken held by this contract
-     * 3. Require balance is greater than 0
-     * 4. Transfer tokens to 'to' address
-     * 5. Emit FundsWithdrawn event
      */
     function withdrawTokens(address to) external onlyOwner {
-        // TODO: Add your implementation here
-        
+        require(to != address(0), "Invalid address");
+        uint256 balance = paymentToken.balanceOf(address(this));
+        require(balance > 0, "No tokens to withdraw");
+        require(paymentToken.transfer(to, balance), "Transfer failed");
+        emit FundsWithdrawn(address(paymentToken), to, balance);
+    }
+    
+    /**
+     * @dev Emergency withdraw any ERC20 token
+     * @param token Address of ERC20 token to withdraw
+     * @param to Address to send tokens to
+     */
+    function emergencyWithdraw(address token, address to) external onlyOwner {
+        require(to != address(0), "Invalid address");
+        IERC20 tokenContract = IERC20(token);
+        uint256 balance = tokenContract.balanceOf(address(this));
+        require(balance > 0, "No tokens to withdraw");
+        require(tokenContract.transfer(to, balance), "Transfer failed");
+        emit FundsWithdrawn(token, to, balance);
     }
     
     /**
@@ -214,13 +241,9 @@ contract NFTCollectionERC20 is ERC721, ERC721URIStorage, Ownable, ReentrancyGuar
     
     /**
      * @dev Get remaining supply
-     * 
-     * TODO: Calculate and return remaining supply
-     * HINT: Subtract current counter from maxSupply
      */
     function remainingSupply() external view returns (uint256) {
-        // TODO: Add your implementation here
-        
+        return maxSupply - _tokenIdCounter.current();
     }
     
     /**

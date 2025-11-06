@@ -54,6 +54,15 @@ Construire un **front-end Next.js + Wagmi** qui intègre :
 
 ---
 
+## Étape 3 — Présentation finale
+### ✅ Tâches
+1. **Préparer une présentation rapide (3 minutes)**
+   - Slides expliquant votre projet, les défis rencontrés et les solutions apportées combiné à l'intégration technique.
+   - Démo live de votre application front-end déployée sur Vercel.
+   - Assurez-vous que le déploiement Vercel fonctionne avant la présentation !
+   - Partager le lien du dépôt **GitHub** et du **déploiement Vercel** sur le Google Sheet du workshop.
+---
+
 ## 🧩 Stack Technique
 
 | Composant | Description |
@@ -83,6 +92,8 @@ Construire un **front-end Next.js + Wagmi** qui intègre :
   - Mint de NFT avec votre propre token  
 - ✅ Lien du dépôt **GitHub**  
 - ✅ Lien du **déploiement Vercel**
+- ✅ Présentation rapide (3 minutes) de votre projet avec slides et démo live (pensez à vérifier que le Vercel fonctionne avant la présentation !)
+
 
 ---
 
